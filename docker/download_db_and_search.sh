@@ -90,7 +90,22 @@ if [ ! -f ${DB}_done ] ; then
    exit_code=$?
    if [[ ${exit_code} -ne 0 ]] ; then
       echo "blastdbcmd exited with status ${exit_code}" >&2
-      exit ${exit_code}
+#      exit ${exit_code}
+
+      echo "update_blastdb.pl failed. Alternative DB download"
+      DIR=$(curl -s http://s3.amazonaws.com/ncbi-blast-databases/latest-dir)
+      echo "from $DIR"
+      for i in $(curl -sf http://s3.amazonaws.com/ncbi-blast-databases/2020-10-10-01-05-01/blastdb-manifest.json | grep ncbi\-blast\-databases | grep /$DB | sed -e 's/[",]//g' | sed -e 's/s3:\//http:\/\/s3.amazonaws.com/g') ; do
+         echo "downloading $i"
+         curl -sSR -O $i
+         exit_code=$?
+         if [[ ${exit_code} -ne 0 ]] ; then
+             echo "Failed to download $i"
+             exit 1
+         fi
+         echo "done"
+      done
+      
    fi
 
    blastdbcheck -db $DB -dbtype ${DB_MOL_TYPE} -no_isam -ends 5
